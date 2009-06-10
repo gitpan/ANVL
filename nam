@@ -1,0 +1,209 @@
+#!/usr/bin/perl -wIlib
+
+use strict;
+
+my $VERSION;
+$VERSION = sprintf "%d.%02d", q$Revision: 0.10 $ =~ /(\d+)/g;
+
+# nam - get and set Namaste tags
+#
+# Do "perl nam --man" for description.
+
+use File::ANVL;
+use Getopt::Long qw(:config bundling_override);
+use Pod::Usage;
+
+my %opt = (
+	help		=> 0,
+	man		=> 0,
+	version		=> 0,
+	directory	=> 0,
+	formatout	=> "",
+	verbose		=> 0,
+);
+
+{	# main
+	GetOptions(\%opt,
+		'help|?',
+		'man',
+		'version',
+		'formatout|f',  # for now no arg; later ANVL, XML, etc
+		'directory|d',
+		'verbose|v',
+	) or pod2usage(1);
+
+	pod2usage(1)
+		if $opt{help};
+	pod2usage(-exitstatus => 0, -verbose => 2)
+		if $opt{man};
+	print "$VERSION\n" and exit(0)
+		if $opt{version};
+
+	if ($opt{directory}) {
+		@ARGV > 0 or
+			pod2usage("$0: -d needs a directory argument");
+		my $dir = shift @ARGV;
+		chdir($dir) or
+			pod2usage("$dir: $!");
+	}
+	$opt{formatout} = ($opt{formatout} ? FMT_ANVL : FMT_BARE);
+
+	@ARGV > 0 or
+		pod2usage("$0: not enough arguments");
+
+	my $cmd = lc(shift @ARGV);
+	my ($num, $fname, $fvalue, $msg, @nnv);
+	my $get = 0;
+
+	if ($cmd eq "set") {
+		@ARGV > 1 or
+			pod2usage("$cmd: needs at least two arguments");
+		($msg = set_namaste(@ARGV))
+			and die($msg);
+	}
+	elsif (($get = $cmd eq "get") || $cmd eq "del" || $cmd eq "delall") {
+
+		$cmd eq "del" && @ARGV == 0 and
+			pod2usage("$cmd: needs tag arguments to delete");
+
+		# same args for command as for get_namaste()
+		@nnv = get_namaste(@ARGV);
+		while (defined($num = shift(@nnv))) {
+			$fname = shift(@nnv);
+			$fvalue = shift(@nnv);
+			if (! $get) {		# we're doing a delete
+				unlink($fname) or
+					print STDERR "$fname: $!";
+				next;
+			}
+			# XXXXX map nums to kernel tags (1->who, etc)
+			#     different kinds of output, eg, XML
+			out(DATA, $num, $fvalue);
+			$opt{verbose} and
+				out(NOTE, "file", $fname);
+		}
+
+	}
+	else {
+		pod2usage("$cmd: unrecognized command");
+	}
+}
+
+sub out { my( $mode, $num, $value, $attribute, @other )=@_;
+
+	# try to convert number to a human readable name if possible
+	my $name = num2dk($num);
+
+	if ($opt{formatout} eq FMT_BARE) {
+		return 1			# don't print comments
+			if ($mode eq NOTE);
+		# if we get here, we have a non-comment (DATA)
+		# xxx ignoring attribute and other
+		return (print $value, "\n");
+	}
+	elsif ($opt{formatout} eq FMT_XML) {	# xxx untested code
+		return (print "<!-- $name, $value -->\n")
+			if ($mode eq NOTE);
+		# if we get here, we have a non-comment (DATA)
+		# xxx ignoring attribute and other
+		return (print "<$name>$value</$name>\n");
+	}
+	# if we get here, we're doing ANVL formatted output
+	return (print "# $name: $value\n")
+		if ($mode eq NOTE);
+	# if we get here, we have a non-comment (DATA)
+	# xxx ignoring attribute and other
+	return (print "$name: $value\n");
+}
+
+__END__
+
+=head1 NAME
+
+nam - set, get, and delete Namaste tag files
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<nam> [B<-dfvh> [B<-d> I<dir>] B<set> I<integer> I<string> [[I<maxlen>] I<ellipsis>]
+
+=item B<nam> [B<-dfvh> [B<-d> I<dir>] B<get> [I<integer> ...]
+
+=item B<nam> [B<-dfvh> [B<-d> I<dir>] B<del> [I<integer> ...]
+
+=item B<nam> [B<-dfvh> [B<-d> I<dir>] B<delall>
+
+=back
+
+=head1 DESCRIPTION
+
+The B<nam> command manages Namaste tag files.  A Namaste (Name-as-text)
+tag file holds a single metadata value and its filename is derived from
+the metadata value.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-d>, B<--directory>
+
+Use I<directory> instead of the current directory to look for tag files.
+
+=item B<-f>
+
+Output in ANVL format.
+
+=item B<-v>, B<--verbose>
+
+Output ancillary information (the tag filename itself) as a comment.
+
+=item B<--help>, B<-?>
+
+Print extended help documentation.
+
+=item B<--man>
+
+Print full documentation.
+
+=item B<--version>
+
+Print the current version number and exit.
+
+=back
+
+=head1 EXAMPLES
+
+  nam set 0 bagit_0.98
+  nam set 1 'Mark Twain'
+  nam set 2 'Adventures of Huckleberry Finn' 13m
+  nam get
+  nam delall
+
+=head1 SEE ALSO
+
+rm(1)
+
+=head1 AUTHOR
+
+John Kunze I<jak at ucop dot edu>
+
+=head1 COPYRIGHT
+
+  Copyright 2009 UC Regents.
+
+  Apache2 open-source license.
+
+=begin CPAN
+
+=head1 README
+
+Manage Namaste tag files.
+
+=head1 SCRIPT CATEGORIES
+
+=end CPAN
+
+=cut
+
+#  LocalWords:  LocalWords Getopt GetOptions ARGV 
