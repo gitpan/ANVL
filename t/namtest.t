@@ -1,6 +1,6 @@
 #########################
 
-use Test::More tests => 40;		# adjust number after adding tests
+use Test::More tests => 41;		# adjust number after adding tests
 
 use strict;
 use File::ANVL;
@@ -44,8 +44,8 @@ is $x, '/hi;!echo', 'trim, max 12';
 file_value("<$t/fvtest", $x, "trim", 12000);
 is $x, '/hi;!echo *; e/fred/foo/pbase', 'trim, max 12000';
 
-is file_value(">/bin/xyjkl", $x), '/bin/xyjkl: Permission denied',
-'no permission test';
+like file_value("<$t/fvtest", $x, "foo"), '/must be one of/',
+'error message test';
 
 like file_value("$t/fvtest", $x),
 '/file .*fvtest. must begin.*/', 'force use of >, <, or >>';
@@ -142,10 +142,9 @@ rmtree($t);
 my $this_dir = ".";
 my $nam_bin = "blib/script/nam";
 my $nam_cmd = (-x $nam_bin ? $nam_bin : "../$nam_bin") . " -d $this_dir ";
-my (@nam_output, $x);
+my ($x);
 
 #system("$nam_cmd dbcreate tst1.rde long 13030 cdlib.org noidTest >/dev/null");
-#@nam_output = `$nam_cmd mint 288`;
 
 $x = `$nam_cmd delall`;
 is $x, "", 'nam delall to clean out test dir';
@@ -176,9 +175,13 @@ $x = `$nam_cmd get 2`;
 chop($x);
 is $x, 'Adventures of Huckleberry Finn', 'get of long "what" value';
 
-$x = `$nam_cmd -fv get 2`;
+$x = `$nam_cmd -vf anvl get 2`;
 chop($x);
-like $x, '/2=Adven___ Finn/', 'get filename with -f and -v';
+like $x, '/2=Adven___ Finn/', 'get filename with "-f anvl" and -v comment';
+
+$x = `$nam_cmd --verbose --format xml get 2`;
+chop($x);
+like $x, '/2=Adven___ Finn -->/', 'get with long options and "xml" comment';
 
 $x = `$nam_cmd delall`;
 is $x, "", 'final nam delall to clean out test dir';

@@ -12,7 +12,7 @@ use constant ANVLS	=> 3;
 
 # output formats
 #
-use constant FMT_BARE	=> 1;
+use constant FMT_PLAIN	=> 1;
 use constant FMT_ANVL	=> 2;
 use constant FMT_XML	=> 3;
 use constant FMT_RDF	=> 4;
@@ -33,7 +33,6 @@ my %kernel = (
 my $anvl_mode = ANVL;
 
 # This is a magic routine that the Exporter calls for any unknown symbols.
-# We use it to allow the caller to redefine what a pair means.
 #
 sub export_fail { my( $class, @symbols )=@_;
 	# XXX define ANVLR, ANVLS, (GR)ANVL*
@@ -49,12 +48,12 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 our $VERSION;
-$VERSION = sprintf "%d.%02d", q$Name: Release-0-2 $ =~ /Release-(\d+)-(\d+)/;
+$VERSION = sprintf "%d.%02d", q$Name: Release-0-11 $ =~ /Release-(\d+)-(\d+)/;
 our @EXPORT = qw(
 	anvl_fmt anvl_split get_namaste set_namaste file_value elide
 	num2dk
 	ANVL ANVLR ANVLS
-	FMT_BARE FMT_ANVL FMT_XML FMT_RDF
+	FMT_PLAIN FMT_ANVL FMT_XML FMT_RDF
 	DATA NOTE
 );
 our @EXPORT_OK = qw(
@@ -248,7 +247,7 @@ sub file_value { my( $file, $value, $how, $length )=@_;
 	$how ||= "trim";		# trim (def), raw, untaint
 	$how = lc($how);
 	$how ne "trim" && $how ne "raw" && $how ne "untaint" and
-		return '"how" must be one of: trim, raw, or untaint';
+		return "third arg ($how) must be one of: trim, raw, or untaint";
 
 	! open(IN, $file) and
 		return "$statfname: $!";
@@ -427,8 +426,9 @@ ANVL - routines to support A Name Value Language, version 0.1
                             # $string but preserves initial newlines and
                             # internal newlines.
 
- $anvl_record = anvl_fmt("erc")        # Example of anvl_fmt() to make an
-     . anvl_fmt("who", $creator)       # ERC with Dublin Kernel metadata.
+ # Example of anvl_fmt() to make an ERC with Dublin Kernel metadata.
+ $anvl_record = anvl_fmt("erc")
+     . anvl_fmt("who", $creator)
      . anvl_fmt("what", $title)
      . anvl_fmt("when", $date)
      . anvl_fmt("where", $identifier)
@@ -443,9 +443,9 @@ ANVL - routines to support A Name Value Language, version 0.1
                             # corrected.  A reference to array of broken
                             # out elements is returned through $elemsref.
 
- my $elemsref;                         # Example use of anvl_split()
+ # Example use of anvl_split() to extract first element.
  ($msg = anvl_split($record, $elemsref)
-     and die("anvl_split: $msg);    # if split went ok, report some stuff
+     and die("anvl_split: $msg);        # report what went wrong
  print scalar($$elemsref), " elements found\n"
      "First element label is $$elemsref[0]\n",
      "First element value is $$elemsref[1]\n";
@@ -453,23 +453,25 @@ ANVL - routines to support A Name Value Language, version 0.1
  $stat = set_namaste( $number, $fvalue, $max, $ellipsis )
                             # Return empty string on success, else an
                             # error message.  The first two arguments are
-                            # required; remaining arg passed to elide().
+                            # required; remaining args passed to elide().
                             # Uses the current directory.
 
- ($msg = set_namaste(0, "dflat_0.4")   # Example: set two tag files
+ # Example: set the directory type and title tag files.
+ ($msg = set_namaste(0, "dflat_0.4")
           || set_namaste(2, "Crime and Punishment"))
      and die("set_namaste: $msg\n");
 
  @num_nam_val_triples = get_namaste( $filenameglob, ...)
                             # Return an array of number/filename/value
                             # triples (eg, every 3rd elem is number).
-			    # Args give partial file globs to fetch
+			    # Args give numbers (as file globs) to fetch
 			    # (eg, "0" or "[1-4]") and no args is same
 			    # as "[0-9]".  Uses the current directory.
 
- my @nnv = get_namaste();   # Example: fetch all namaste tags and print
- while (defined($num = shift(@nnv))) {  # first of triple is tag number
-     $fname = shift(@nnv);              # second is filename derived
+ # Example: fetch all namaste tags and print.
+ my @nnv = get_namaste();
+ while (defined($num = shift(@nnv))) {  # first of triple is tag number;
+     $fname = shift(@nnv);              # second is filename derived...
      $fvalue = shift(@nnv);             # from third (the full value)
      print "Tag $num (from $fname): $fvalue\n";
  }
@@ -521,12 +523,14 @@ and C<get_namaste()>.
 
 =head1 SEE ALSO
 
-L<http://www.cdlib.org/inside/diglib/anvl/anvlspec.html>
+A Name Value Language (ANVL)
+	L<http://www.cdlib.org/inside/diglib/ark/anvlspec.pdf>
 
-L<http://www.cdlib.org/inside/diglib/namaste/namastespec.html>
+Directory Description with Namaste Tags
+	L<http://www.cdlib.org/inside/diglib/namaste/namastespec.html>
 
 A Metadata Kernel for Electronic Permanence (PDF)
-	L<http://jodi.ecs.soton.ac.uk/Articles/v02/i02/Kunze/>
+	L<http://journals.tdl.org/jodi/article/view/43>
 
 =head1 HISTORY
 
@@ -534,7 +538,7 @@ This is an alpha version of ANVL tools.  It is written in Perl.
 
 =head1 AUTHOR
 
-John A. Kunze E<lt>jak@ucop.eduE<gt>.
+John A. Kunze I<jak at ucop dot edu>
 
 =head1 COPYRIGHT AND LICENSE
 
